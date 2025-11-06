@@ -1,12 +1,17 @@
 HWP to PDF Converter API
-한컴 HWP/HWPX 파일을 PDF로 변환하는 REST API입니다.
+한컴 HWP 파일을 PDF로 변환하는 REST API입니다.
 개요
 AWS EC2 Windows 환경에서 pywin32로 한컴 오피스 2024를 제어해서 HWP 파일을 PDF로 변환합니다.
 서버 정보
 
 주소: http://43.201.23.85:8000
 인스턴스: t3.medium (Windows Server 2022)
-현재 버전: v1.2.0
+현재 버전: v1.3.0
+
+지원 형식
+
+.hwp, .hwpx (일반 문서)
+.hwt, .hwtx (서식 파일)
 
 주요 기능
 
@@ -20,10 +25,10 @@ AWS EC2 Windows 환경에서 pywin32로 한컴 오피스 2024를 제어해서 HW
 powershellcd C:\hwp-api
 .\venv\Scripts\Activate.ps1
 python app.py
-Python 예제
+Python 사용 예제
+단일 파일:
 pythonimport requests
 
-# 파일 업로드
 response = requests.post(
     "http://43.201.23.85:8000/convert",
     files={"file": open("document.hwp", "rb")}
@@ -31,13 +36,12 @@ response = requests.post(
 
 result = response.json()
 print(f"변환 완료: {result['pdf_filename']}")
-print(f"소요 시간: {result['conversion_time_seconds']}초")
 
 # PDF 다운로드
 pdf = requests.get(f"http://43.201.23.85:8000{result['download_url']}")
 with open(result['pdf_filename'], 'wb') as f:
     f.write(pdf.content)
-다중 파일 변환
+다중 파일:
 pythonfiles = [
     ("files", open("file1.hwp", "rb")),
     ("files", open("file2.hwpx", "rb")),
@@ -82,9 +86,9 @@ AWS EC2
 초기 설정
 powershellcd C:\hwp-api
 
-# 필요한 폴더 생성
-@("input", "output", "logs", "scripts") | ForEach-Object { 
-    New-Item -ItemType Directory -Path $_ -Force 
+# 폴더 생성
+@("input", "output", "logs", "scripts") | ForEach-Object {
+    New-Item -ItemType Directory -Path $_ -Force
 }
 
 # 가상환경 생성
@@ -93,7 +97,7 @@ python -m venv venv
 
 # 의존성 설치
 pip install -r requirements.txt
-레지스트리 설정 (중요)
+레지스트리 설정 (필수)
 변환 시 나타나는 팝업을 자동으로 처리하려면 레지스트리 설정이 필요합니다.
 수동 설정:
 
@@ -146,13 +150,14 @@ python app.py
 EC2 보안 그룹에서 포트 8000 인바운드 규칙도 확인하세요.
 변환 실패
 
-지원 형식: .hwp, .hwpx만 가능
+지원 형식: .hwp, .hwpx, .hwt, .hwtx
 파일 크기: 50MB 미만 권장
 한컴 오피스 2024가 정상 설치되어 있는지 확인
 
 기술 스택
 
-FastAPI 0.104.1
+FastAPI 0.121.0
+Uvicorn 0.38.0
 Python 3.11
 pywin32 306
 한컴 오피스 2024
@@ -168,6 +173,11 @@ Rate Limiting
 CORS 제한
 
 변경 이력
+
+v1.3.0 (2025-11-06)
+
+hwt, hwtx 형식 지원 추가
+
 
 v1.2.0 (2025-11-06)
 
@@ -186,9 +196,5 @@ v1.0.0 (2025-11-05)
 
 초기 버전
 
-
-
-라이선스
-MIT License
 
 마지막 업데이트: 2025-11-06
