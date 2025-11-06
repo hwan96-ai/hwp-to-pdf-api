@@ -3,45 +3,40 @@ import sys
 import os
 import winreg
 
-def convert_hwp_to_pdf(input_file, output_file):
-    """HWP to PDF with popup suppression"""
-    
+def register_dll():
+    """DLL 명시적 등록"""
     try:
-        # 레지스트리 설정 (강제)
         reg_path = r"Software\HNC\HwpCtrl\Modules"
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        dll_path = os.path.join(script_dir, "FilePathCheckerModule.dll")
+        dll_path = r"C:\hwp-api\scripts\FilePathCheckerModule.dll"
         
-        try:
-            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, reg_path)
-            winreg.SetValueEx(key, "FilePathCheckerModule", 0, winreg.REG_SZ, dll_path)
-            winreg.CloseKey(key)
-        except:
-            pass
+        key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, reg_path)
+        winreg.SetValueEx(key, "FilePathCheckerModule", 0, winreg.REG_SZ, dll_path)
+        winreg.CloseKey(key)
+    except:
+        pass
+
+def convert_hwp_to_pdf(input_file, output_file):
+    """HWP/HWPX/HWT/HWTZ를 PDF로 변환"""
+    try:
+        register_dll()
         
         if not os.path.exists(input_file):
             return False
         
-        # 한컴 오피스 실행
         hwp = win32com.client.gencache.EnsureDispatch("HWPFrame.HwpObject")
         
-        # 보안 모듈 등록
         try:
             hwp.RegisterModule("FilePathCheckDLL", "FilePathCheckerModule")
         except:
             pass
         
-        # 파일 열기
         hwp.Open(str(input_file), "")
         
-        # PDF 저장
         hwp.HParameterSet.HFileOpenSave.filename = output_file
         hwp.HParameterSet.HFileOpenSave.Format = "PDF"
         hwp.HAction.Execute("FileSaveAs_S", hwp.HParameterSet.HFileOpenSave.HSet)
         
-        # 종료
         hwp.Quit()
-        
         return True
     
     except Exception as e:
