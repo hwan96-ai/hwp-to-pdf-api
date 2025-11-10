@@ -100,14 +100,14 @@ async def convert_hwp_to_pdf(file: UploadFile = File(...)):
         
         # 변환 실행
         logger.info(f"[{job_id}] 변환 시작...")
-        
+
         result = subprocess.run(
-            ["python", str(BASE_DIR / "convert_hwp.py"), str(input_path), str(output_path)],
+            [sys.executable, str(BASE_DIR / "convert_hwp.py"), str(input_path), str(output_path)],
             capture_output=True,
             timeout=120,
             text=True
         )
-        
+                
         elapsed = time.time() - start_time
         
         # 입력 파일 삭제
@@ -194,14 +194,14 @@ async def convert_batch(files: list[UploadFile] = File(...)):
             # 출력 파일명
             output_filename = f"{Path(file.filename).stem}.pdf"
             output_path = OUTPUT_DIR / output_filename
-            
-            # 변환 실행
+
             result = subprocess.run(
-                ["python", str(BASE_DIR / "convert_hwp.py"), str(input_path), str(output_path)],
+                [sys.executable, str(BASE_DIR / "convert_hwp.py"), str(input_path), str(output_path)],
                 capture_output=True,
                 timeout=120,
                 text=True
             )
+
             
             elapsed = time.time() - start_time
             
@@ -316,12 +316,12 @@ if __name__ == "__main__":
     logger.info("🚀 HWP to PDF Converter API 시작")
     logger.info("=" * 70)
     logger.info(f"📁 기본 디렉토리: {BASE_DIR}")
-    logger.info(f"📡 API: http://0.0.0.0:8000")
-    logger.info(f"📖 문서: http://0.0.0.0:8000/docs")
+    logger.info(f"📡 API: http://0.0.0.0:9000")
+    logger.info(f"📖 문서: http://0.0.0.0:9000/docs")
     logger.info(f"📌 단일 파일: POST /convert")
     logger.info(f"📌 다중 파일: POST /convert-batch")
     logger.info(f"⏰ 자동 재시작: {RESTART_INTERVAL_HOURS}시간마다")
     logger.info(f"⏰ 예정 재시작: {(SERVER_START_TIME + timedelta(hours=RESTART_INTERVAL_HOURS)).strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 70)
     
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=9000, log_level="info")

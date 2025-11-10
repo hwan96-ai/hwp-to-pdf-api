@@ -1,200 +1,121 @@
-HWP to PDF Converter API
-한컴 HWP 파일을 PDF로 변환하는 REST API입니다.
-개요
-AWS EC2 Windows 환경에서 pywin32로 한컴 오피스 2024를 제어해서 HWP 파일을 PDF로 변환합니다.
-서버 정보
+# HWP to PDF Converter API
 
-주소: http://43.201.23.85:8000
-인스턴스: t3.medium (Windows Server 2022)
-현재 버전: v1.3.0
+Windows 환경에서 HWP 파일을 PDF로 변환하는 REST API
 
-지원 형식
+## 개요
 
-.hwp, .hwpx (일반 문서)
-.hwt, .hwtx (서식 파일)
+pywin32로 한컴 오피스를 제어하여 HWP/HWPX 파일을 PDF로 변환합니다.
 
-주요 기능
+**지원 형식**: `.hwp`, `.hwpx`, `.hwt`, `.hwtx`
 
-단일/다중 파일 변환
-원본 한글 파일명 유지
-변환 팝업 자동 처리
-24시간마다 자동 재시작
+## 빠른 시작
 
-빠른 시작
-서버 실행
-powershellcd C:\hwp-api
+### 서버 실행
+
+cd C:\Users\AIService\Desktop\hwp-to-pdf-api
 .\venv\Scripts\Activate.ps1
-python app.py
-Python 사용 예제
-단일 파일:
-pythonimport requests
+uvicorn app:app --host 0.0.0.0 --port 9000
 
-response = requests.post(
-    "http://43.201.23.85:8000/convert",
-    files={"file": open("document.hwp", "rb")}
-)
+text
 
-result = response.json()
-print(f"변환 완료: {result['pdf_filename']}")
+### Python 예제
 
-# PDF 다운로드
-pdf = requests.get(f"http://43.201.23.85:8000{result['download_url']}")
-with open(result['pdf_filename'], 'wb') as f:
-    f.write(pdf.content)
-다중 파일:
-pythonfiles = [
-    ("files", open("file1.hwp", "rb")),
-    ("files", open("file2.hwpx", "rb")),
-]
+import requests
 
-response = requests.post(
-    "http://43.201.23.85:8000/convert-batch",
-    files=files
-)
-
-result = response.json()
-print(f"성공: {result['success_count']}/{result['total_files']}")
-API
-엔드포인트
-메서드경로설명POST/convert단일 파일 변환POST/convert-batch다중 파일 변환GET/download/{filename}PDF 다운로드GET/health상태 확인GET/stats통계 조회
 단일 파일 변환
-bashcurl -X POST "http://43.201.23.85:8000/convert" \
-  -F "file=@document.hwp"
-응답:
-json{
-  "status": "success",
-  "original_filename": "document.hwp",
-  "pdf_filename": "document.pdf",
-  "conversion_time_seconds": 3.3,
-  "download_url": "/download/document.pdf"
-}
-다중 파일 변환
-bashcurl -X POST "http://43.201.23.85:8000/convert-batch" \
-  -F "files=@file1.hwp" \
-  -F "files=@file2.hwpx"
-상태 확인
-bashcurl http://43.201.23.85:8000/health
-서버 시작 시간과 다음 재시작 예정 시간을 확인할 수 있습니다.
-설치 및 설정
-요구사항
+response = requests.post(
+"http://172.20.1.241:9000/convert",
+files={"file": open("document.hwp", "rb")}
+)
+print(response.json())
 
-Windows Server 2022 이상
-Python 3.11 이상
-한컴 오피스 2024
-AWS EC2
+PDF 다운로드
+pdf_url = response.json()['download_url']
+pdf = requests.get(f"http://172.20.1.241:9000{pdf_url}")
+with open("output.pdf", "wb") as f:
+f.write(pdf.content)
 
-초기 설정
-powershellcd C:\hwp-api
+text
 
-# 폴더 생성
-@("input", "output", "logs", "scripts") | ForEach-Object {
-    New-Item -ItemType Directory -Path $_ -Force
-}
+## API 엔드포인트
 
-# 가상환경 생성
-python -m venv venv
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/convert` | 단일 파일 변환 |
+| POST | `/convert-batch` | 다중 파일 변환 |
+| GET | `/download/{filename}` | PDF 다운로드 |
+| GET | `/health` | 상태 확인 |
+
+**API 문서**: `http://172.20.1.241:9000/docs`
+
+## 설치
+
+### 요구사항
+
+- Windows Server 2022 이상
+- Python 3.12 이상
+- 한컴 오피스 2024
+
+### 설정
+
+가상환경 생성 및 활성화
+py -3.12 -m venv venv
 .\venv\Scripts\Activate.ps1
 
-# 의존성 설치
+의존성 설치
 pip install -r requirements.txt
-레지스트리 설정 (필수)
-변환 시 나타나는 팝업을 자동으로 처리하려면 레지스트리 설정이 필요합니다.
-수동 설정:
 
-Win+R → regedit 실행
-경로 이동: HKEY_CURRENT_USER\Software\Hnc\HwpAutomation\Modules
-FilePathCheckerModule 값을 C:\hwp-api\scripts\FilePathCheckerModule.dll로 설정
+pywin32 post-install
+python -m pywin32_postinstall -install
 
-자동 설정 (PowerShell):
-powershell$regPath = "HKCU:\Software\Hnc\HwpAutomation\Modules"
-$dllPath = "C:\hwp-api\scripts\FilePathCheckerModule.dll"
+text
 
-if (-not (Test-Path $regPath)) {
-    New-Item -Path $regPath -Force | Out-Null
-}
+### 레지스트리 설정
 
-Set-ItemProperty -Path $regPath -Name "FilePathCheckerModule" `
-    -Value $dllPath -Type String -Force
-프로젝트 구조
-C:\hwp-api\
-├── app.py                    # FastAPI 서버
-├── convert_hwp.py            # 변환 로직
-├── batch_convert.py          # 배치 변환 스크립트
-├── test_hwp_api.py           # 테스트 스크립트
-├── requirements.txt
-├── venv\
-├── scripts\
-│   └── FilePathCheckerModule.dll
-├── input\                    # 임시 업로드
-├── output\                   # 변환 결과
-└── logs\
-문제 해결
-팝업창이 계속 나타남
-레지스트리 설정을 확인하세요.
+DLL 경로가 동적으로 설정되므로 별도 설정 불필요합니다.  
+수동 설정이 필요한 경우:
 
-경로: HKEY_CURRENT_USER\Software\Hnc\HwpAutomation\Modules
-값: FilePathCheckerModule = C:\hwp-api\scripts\FilePathCheckerModule.dll
+$regPath = "HKCU:\Software\HNC\HwpAutomation\Modules"
+$dllPath = "C:\Users\AIService\Desktop\hwp-to-pdf-api\scripts\FilePathCheckerModule.dll"
 
-API 연결 실패
-powershell# 포트 확인
-netstat -ano | findstr ":8000"
+New-Item -Path $regPath -Force | Out-Null
+Set-ItemProperty -Path $regPath -Name "FilePathCheckerModule" -Value $dllPath -Force
 
-# 상태 확인
-curl http://43.201.23.85:8000/health
+text
 
-# 서버 재시작
-taskkill /F /IM python.exe
-cd C:\hwp-api
-.\venv\Scripts\Activate.ps1
-python app.py
-EC2 보안 그룹에서 포트 8000 인바운드 규칙도 확인하세요.
-변환 실패
+### 방화벽 설정
 
-지원 형식: .hwp, .hwpx, .hwt, .hwtx
-파일 크기: 50MB 미만 권장
-한컴 오피스 2024가 정상 설치되어 있는지 확인
+netsh advfirewall firewall add rule name="HWP to PDF API Port 9000" dir=in action=allow protocol=TCP localport=9000
 
-기술 스택
+text
 
-FastAPI 0.121.0
-Uvicorn 0.38.0
-Python 3.11
-pywin32 306
-한컴 오피스 2024
-AWS EC2 (Windows Server 2022)
+## 기술 스택
 
-보안
-현재는 개발 환경으로 운영 중입니다.
-프로덕션 적용 시 고려사항:
+- FastAPI 0.121.0
+- Python 3.12
+- pywin32 311
+- 한컴 오피스 2024
 
-API Key 인증
-HTTPS 적용
-Rate Limiting
-CORS 제한
+## 변경 이력
 
-변경 이력
+- **v1.4.0** (2025-11-10)
+  - subprocess에서 sys.executable 사용하도록 수정
+  - 레지스트리 경로 수정 (HwpCtrl → HwpAutomation)
+  - DLL 경로 동적 설정
+  - cp949 인코딩 오류 수정
+  - 포트 변경 (8000 → 9000)
 
-v1.3.0 (2025-11-06)
+- **v1.3.0** (2025-11-06)
+  - hwt, hwtx 형식 지원 추가
 
-hwt, hwtx 형식 지원 추가
+- **v1.2.0** (2025-11-06)
+  - 다중 파일 변환 지원
+  - 24시간 자동 재시작
 
+## 라이선스
 
-v1.2.0 (2025-11-06)
+MIT License
 
-다중 파일 변환 지원
-24시간 자동 재시작
-레지스트리 자동 설정 스크립트
+---
 
-
-v1.1.0 (2025-11-05)
-
-팝업 자동 처리
-원본 파일명 유지
-
-
-v1.0.0 (2025-11-05)
-
-초기 버전
-
-
-마지막 업데이트: 2025-11-06
+마지막 업데이트: 2025-11-10
