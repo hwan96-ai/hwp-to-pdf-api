@@ -12,6 +12,7 @@ This file routes Codex and other coding agents to the shared project guidance in
 - Use [docs/claude/security-and-secrets.md](docs/claude/security-and-secrets.md) for privacy, sensitive files, logs, and endpoint handling.
 - Use [docs/claude/portfolio-showcase-rules.md](docs/claude/portfolio-showcase-rules.md) before any public portfolio or showcase discussion.
 - Use [docs/claude/release-and-git-hygiene.md](docs/claude/release-and-git-hygiene.md) before commits, pushes, or release-like work.
+- `docs/solutions/` contains documented solutions and workflow lessons organized by category with YAML frontmatter; it is relevant when implementing or debugging in documented areas.
 
 ## Non-Negotiables
 

@@ -16,6 +16,7 @@ This file routes Claude Code to the shared durable instructions in `docs/claude/
 ## Claude-Specific Notes
 
 - Keep this router concise. Put durable project guidance in `docs/claude/`.
+- `docs/solutions/` contains documented solutions and workflow lessons organized by category with YAML frontmatter; it is relevant when implementing or debugging in documented areas.
 - Do not create files under `.claude/`.
 - Treat documents, conversion outputs, credentials, endpoints, customer data, and internal deployment details as sensitive.
 - Do not commit `.codex_task.md` or other local-only task files.
