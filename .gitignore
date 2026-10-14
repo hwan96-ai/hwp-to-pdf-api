@@ -28,7 +28,7 @@ input/*
 logs/*
 
 # 사이즈 큰 파일
-output/*.pdf
+output/*
 
 # IDE
 .vscode/
