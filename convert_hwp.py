@@ -4,6 +4,12 @@ import os
 import winreg
 from pathlib import Path
 
+from worker_runtime import COM_CLEANUP_UNCERTAIN_EXIT_CODE
+
+
+class HancomCleanupError(RuntimeError):
+    """The COM object was created, but its termination could not be confirmed."""
+
 
 def register_dll():
     """DLL 명시적 등록 - 동적 경로 사용"""
@@ -29,7 +35,8 @@ def register_dll():
 
 
 def convert_hwp_to_pdf(input_file, output_file):
-    """HWP/HWPX/HWT/HWTZ를 PDF로 변환"""
+    """HWP/HWPX/HWT/HWTX를 PDF로 변환; always close the automation object."""
+    hwp = None
     try:
         register_dll()
         
@@ -37,7 +44,7 @@ def convert_hwp_to_pdf(input_file, output_file):
             print(f"[ERROR] File not found: {input_file}")  # 이모지 제거
             return False
         
-        hwp = win32com.client.gencache.EnsureDispatch("HWPFrame.HwpObject")
+        hwp = win32com.client.DispatchEx("HWPFrame.HwpObject")
         
         try:
             hwp.RegisterModule("FilePathCheckDLL", "FilePathCheckerModule")
@@ -46,29 +53,37 @@ def convert_hwp_to_pdf(input_file, output_file):
             print(f"[WARNING] Security module registration failed: {e}")  # 이모지 제거
             pass
         
-        hwp.Open(str(input_file), "")
+        if not hwp.Open(str(input_file), ""):
+            raise RuntimeError("Hancom could not open the document")
         print(f"[OK] File opened: {input_file}")  # 이모지 제거
         
         hwp.HParameterSet.HFileOpenSave.filename = output_file
         hwp.HParameterSet.HFileOpenSave.Format = "PDF"
-        hwp.HAction.Execute("FileSaveAs_S", hwp.HParameterSet.HFileOpenSave.HSet)
+        if not hwp.HAction.Execute("FileSaveAs_S", hwp.HParameterSet.HFileOpenSave.HSet):
+            raise RuntimeError("Hancom could not save the PDF")
         
-        hwp.Quit()
         print(f"[OK] PDF saved: {output_file}")  # 이모지 제거
         return True
     
     except Exception as e:
         print(f"[ERROR] Conversion failed: {e}")  # 이모지 제거
         return False
+    finally:
+        if hwp is not None:
+            try:
+                hwp.Quit()
+            except Exception as error:
+                print("[WARNING] Hancom automation cleanup failed")
+                raise HancomCleanupError("Hancom termination is uncertain") from error
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 3:
+def main(arguments=None):
+    arguments = sys.argv[1:] if arguments is None else arguments
+    if len(arguments) != 2:
         print("Usage: python convert_hwp.py <input_file> <output_file>")
-        sys.exit(1)
+        return 1
     
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
+    input_file, output_file = arguments
     
     print("=" * 70)
     print("HWP to PDF Conversion Started")
@@ -76,5 +91,12 @@ if __name__ == "__main__":
     print(f"Output: {output_file}")
     print("=" * 70)
     
-    success = convert_hwp_to_pdf(input_file, output_file)
-    sys.exit(0 if success else 1)
+    try:
+        success = convert_hwp_to_pdf(input_file, output_file)
+    except HancomCleanupError:
+        return COM_CLEANUP_UNCERTAIN_EXIT_CODE
+    return 0 if success else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
